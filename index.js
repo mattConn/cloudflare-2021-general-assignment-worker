@@ -6,6 +6,17 @@ addEventListener('fetch', event => {
  * @param {Request} request
  */
 async function handleRequest(request) {
+  // KV Schema:
+  // ==========
+  // {
+  //   author:
+  //   {
+  //     title: {
+  //       content: ""
+  //     },
+  //   },
+  // }
+
   const path = request.url.split('/')
   let response
   const origin = 'http://localhost:3000'
@@ -14,15 +25,24 @@ async function handleRequest(request) {
     switch (request.method) {
       case 'GET':
         const list = await KV.list()
-        const keys = list.keys.map(key => key.name)
+        const usernames = list.keys.map(key => key.name)
 
-        const posts = await Promise.all(keys.map(async key => {
-          const post = JSON.parse(await KV.get(key))
-          post.username = key
-          return post
+        const posts = await Promise.all(usernames.map(async username => {
+          const userPosts = JSON.parse(await KV.get(username))
+          console.log('userPosts', userPosts)
+          const formattedPosts = [] 
+          Object.keys(userPosts).forEach(title => {
+            formattedPosts.push({
+              title: title,
+              content: userPosts[title].content,
+              username: username
+            })
+          })
+
+          return formattedPosts
         }))
 
-        response = new Response(JSON.stringify(posts), {
+        response = new Response(JSON.stringify(posts.flat()), {
           headers: {
             'content-type': 'application/json',
             'Access-Control-Allow-Origin': origin,
