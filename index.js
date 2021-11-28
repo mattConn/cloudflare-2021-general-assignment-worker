@@ -7,6 +7,8 @@ addEventListener('fetch', event => {
  */
 async function handleRequest(request) {
   const path = request.url.split('/')
+  let response
+  const origin = 'http://localhost:3000'
 
   if (path[path.length - 1] === 'posts') {
     switch (request.method) {
@@ -20,13 +22,17 @@ async function handleRequest(request) {
           return post
         }))
 
-        return new Response(JSON.stringify(posts), {
-          headers: { 'content-type': 'application/json' },
+        response = new Response(JSON.stringify(posts), {
+          headers: {
+            'content-type': 'application/json',
+            'Access-Control-Allow-Origin': origin,
+          },
         })
+
+        return response
 
       case 'POST':
         let error = false
-        let response
 
         if (!request.headers.get('content-type').includes('application/json')) {
           error = true
@@ -54,11 +60,18 @@ async function handleRequest(request) {
             })
           } else {
             const newEntry = {
-              title: data.title,
               content: data.content
             }
 
-            await KV.put(data.username.toLowerCase(), JSON.stringify(newEntry))
+            let postsByTitle = JSON.parse(await KV.get(data.username.toLowerCase()))
+            if(!postsByTitle){
+              const newPost = {}
+              newPost[data.title.toLowerCase()] = newEntry
+              await KV.put(data.username.toLowerCase(), JSON.stringify(newPost))
+            } else {
+              postsByTitle[data.title.toLowerCase()] = newEntry
+              await KV.put(data.username.toLowerCase(), JSON.stringify(postsByTitle))
+            }
 
             response = new Response('success', {
               headers: { 'content-type': 'text/plain' },
