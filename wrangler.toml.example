@@ -1,0 +1,13 @@
+name = "cloudflare-2021-general-assignment"
+account_id = "REPLACE ME"
+type = "webpack"
+route = ''
+zone_id = ''
+usage_model = ''
+compatibility_flags = []
+workers_dev = true
+compatibility_date = "2021-11-27"
+
+kv_namespaces = [ 
+    { binding = "KV", preview_id = "REPLACE ME", id = "REPLACE ME" } 
+]
