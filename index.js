@@ -8,8 +8,8 @@ addEventListener('fetch', event => {
 async function handleRequest(request) {
   const path = request.url.split('/')
 
-  if(path[path.length-1] === 'posts'){
-    switch(request.method){
+  if (path[path.length - 1] === 'posts') {
+    switch (request.method) {
       case 'GET':
         const list = await KV.list()
         const keys = list.keys.map(key => key.name)
@@ -25,33 +25,55 @@ async function handleRequest(request) {
         })
 
       case 'POST':
-        // TODO: handle error for missing key, handle error for non-json post
-        const data = await request.json()
-        const wantedKeys = ['content', 'title', 'username']
+        let error = false
+        let response
 
-        let response = new Response('success', {
-          headers: { 'content-type': 'text/plain' },
-        })
+        if (!request.headers.get('content-type').includes('application/json')) {
+          error = true
+          response = new Response('Post content needs to be JSON', {
+            status: 400,
+            headers: { 'content-type': 'text/plain' },
+          })
+        }
 
-        wantedKeys.forEach(key => {
-          console.log(key)
-          if(!data.hasOwnProperty(key)){
-            response = new Response(`Missing "${key}" from post`, {
+        if (!error) {
+          let data = await request.json()
+          const wantedKeys = ['content', 'title', 'username']
+          const missing = []
+          for (let key of wantedKeys) {
+            if (!data.hasOwnProperty(key)) {
+              missing.push(key)
+            }
+          }
+
+          if (missing.length) {
+            error = true
+            response = new Response(`Missing ${missing.join(', ')} from post`, {
+              status: 400,
+              headers: { 'content-type': 'text/plain' },
+            })
+          } else {
+            const newEntry = {
+              title: data.title,
+              content: data.content
+            }
+
+            await KV.put(data.username.toLowerCase(), JSON.stringify(newEntry))
+
+            response = new Response('success', {
               headers: { 'content-type': 'text/plain' },
             })
           }
-        })
-
-        const newEntry = {
-          title: data.title,
-          content: data.content
         }
-
-        await KV.put(data.username.toLowerCase(), JSON.stringify(newEntry))
 
         return response
 
-    }
+      default:
+        return new Response(`Method ${request.method} unsupported`, {
+          status: 400,
+        })
+
+    } // end switch
   } else {
     return new Response('404 not found', {
       status: 404,
