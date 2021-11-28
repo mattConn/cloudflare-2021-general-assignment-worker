@@ -10,16 +10,46 @@ async function handleRequest(request) {
 
   if(path[path.length-1] === 'posts'){
     switch(request.method){
-
       case 'GET':
-        return new Response('GET response\n', {
-          headers: { 'content-type': 'text/plain' },
+        const list = await KV.list()
+        const keys = list.keys.map(key => key.name)
+
+        const posts = await Promise.all(keys.map(async key => {
+          const post = JSON.parse(await KV.get(key))
+          post.username = key
+          return post
+        }))
+
+        return new Response(JSON.stringify(posts), {
+          headers: { 'content-type': 'application/json' },
         })
 
       case 'POST':
-        return new Response(`POST response\n${JSON.stringify(await request.json())}\n`, {
+        // TODO: handle error for missing key, handle error for non-json post
+        const data = await request.json()
+        const wantedKeys = ['content', 'title', 'username']
+
+        let response = new Response('success', {
           headers: { 'content-type': 'text/plain' },
         })
+
+        wantedKeys.forEach(key => {
+          console.log(key)
+          if(!data.hasOwnProperty(key)){
+            response = new Response(`Missing "${key}" from post`, {
+              headers: { 'content-type': 'text/plain' },
+            })
+          }
+        })
+
+        const newEntry = {
+          title: data.title,
+          content: data.content
+        }
+
+        await KV.put(data.username.toLowerCase(), JSON.stringify(newEntry))
+
+        return response
 
     }
   } else {
