@@ -1,10 +1,26 @@
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
-/**
- * Respond with hello worker text
- * @param {Request} request
- */
+
+const origin = 'http://localhost:3000'
+
+const makeHeaders = (content) => {
+  const headers = {
+    'content-type': '',
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  }
+  switch (content) {
+    case 'text':
+      headers['content-type'] = 'text/plain'
+      return headers
+
+    case 'json':
+      headers['content-type'] = 'application/json'
+      return headers
+  }
+}
+
 async function handleRequest(request) {
   // KV Schema:
   // ==========
@@ -19,10 +35,18 @@ async function handleRequest(request) {
 
   const path = request.url.split('/')
   let response
-  const origin = 'http://localhost:3000'
 
   if (path[path.length - 1] === 'posts') {
     switch (request.method) {
+      case 'OPTIONS':
+        return new Response(null, {
+          headers: {
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          }
+        })
+
       case 'GET':
         const list = await KV.list()
         const usernames = list.keys.map(key => key.name)
@@ -30,7 +54,7 @@ async function handleRequest(request) {
         const posts = await Promise.all(usernames.map(async username => {
           const userPosts = JSON.parse(await KV.get(username))
           console.log('userPosts', userPosts)
-          const formattedPosts = [] 
+          const formattedPosts = []
           Object.keys(userPosts).forEach(title => {
             formattedPosts.push({
               title: title,
@@ -43,10 +67,7 @@ async function handleRequest(request) {
         }))
 
         response = new Response(JSON.stringify(posts.flat()), {
-          headers: {
-            'content-type': 'application/json',
-            'Access-Control-Allow-Origin': origin,
-          },
+          headers: makeHeaders('json')
         })
 
         return response
@@ -58,7 +79,7 @@ async function handleRequest(request) {
           error = true
           response = new Response('Post content needs to be JSON', {
             status: 400,
-            headers: { 'content-type': 'text/plain' },
+            headers: makeHeaders('text')
           })
         }
 
@@ -76,7 +97,7 @@ async function handleRequest(request) {
             error = true
             response = new Response(`Missing ${missing.join(', ')} from post`, {
               status: 400,
-              headers: { 'content-type': 'text/plain' },
+              headers: makeHeaders('text')
             })
           } else {
             const newEntry = {
@@ -84,7 +105,7 @@ async function handleRequest(request) {
             }
 
             let postsByTitle = JSON.parse(await KV.get(data.username.toLowerCase()))
-            if(!postsByTitle){
+            if (!postsByTitle) {
               const newPost = {}
               newPost[data.title.toLowerCase()] = newEntry
               await KV.put(data.username.toLowerCase(), JSON.stringify(newPost))
@@ -94,7 +115,7 @@ async function handleRequest(request) {
             }
 
             response = new Response('success', {
-              headers: { 'content-type': 'text/plain' },
+              headers: makeHeaders('text')
             })
           }
         }
