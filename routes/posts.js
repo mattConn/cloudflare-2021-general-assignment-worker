@@ -1,4 +1,4 @@
-import { makeHeaders, checkContentType } from "../config"
+import { makeHeaders, checkContentType, checkRequestKeys } from "../helpers"
 
 const handleGet = async () => {
     const list = await KV.list()
@@ -34,22 +34,11 @@ const handlePost = async (request) => {
         return errorResp
     }
 
-    let response
     const data = await request.json()
-    const neededKeys = ['content', 'title', 'username']
-    const missing = []
-    for (let key of neededKeys) {
-        if (!data.hasOwnProperty(key)) {
-            missing.push(key)
-        }
-    }
+    const missingKeysResponse = checkRequestKeys(data, 'content', 'title', 'username')
 
-    if (missing.length) {
-        error = true
-        response = new Response(`Missing ${missing.join(', ')} from post`, {
-            status: 400,
-            headers: makeHeaders('text/plain')
-        })
+    if (missingKeysResponse){
+        return missingKeysResponse
     } else {
         const newEntry = {
             content: data.content,
@@ -66,12 +55,10 @@ const handlePost = async (request) => {
             await KV.put(data.username.toLowerCase(), JSON.stringify(postsByTitle))
         }
 
-        response = new Response('success', {
+        return new Response('success', {
             headers: makeHeaders('text/plain')
         })
     }
-
-    return response
 }
 
 export { handleGet, handlePost }

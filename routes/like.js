@@ -1,4 +1,4 @@
-import { checkContentType, makeHeaders } from "../config"
+import { checkContentType, makeHeaders, checkRequestKeys } from "../helpers"
 
 const handlePost = async (request) => {
     const errorResponse = checkContentType(request, 'application/json')
@@ -7,19 +7,20 @@ const handlePost = async (request) => {
         return errorResponse
     }
 
-    let response
     const data = await request.json()
+    const missingKeysResponse = checkRequestKeys(data, 'title', 'username')
 
+    if (missingKeysResponse) {
+        return missingKeysResponse
+    } else {
+        const posts = JSON.parse(await KV.get(data.username))
+        posts[data.title].likes++
+        await KV.put(data.username, JSON.stringify(posts))
 
-    const posts = JSON.parse(await KV.get(data.username))
-    posts[data.title].likes++
-    await KV.put(data.username, JSON.stringify(posts))
-
-    response = new Response(`${posts[data.title].likes}`, {
-        headers: makeHeaders('text/plain')
-    })
-
-    return response
+        return new Response(`${posts[data.title].likes}`, {
+            headers: makeHeaders('text/plain')
+        })
+    }
 }
 
 export { handlePost }

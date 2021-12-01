@@ -1,4 +1,4 @@
-import { handleOptions } from './config'
+import { handleOptions } from './helpers'
 import {handleGet as posts_handleGet, handlePost as posts_handlePost } from './routes/posts'
 import {handlePost as like_handlePost} from './routes/like'
 
