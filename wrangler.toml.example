@@ -11,3 +11,6 @@ compatibility_date = "2021-11-27"
 kv_namespaces = [ 
     { binding = "KV", preview_id = "REPLACE ME", id = "REPLACE ME" } 
 ]
+
+[vars]
+FRONTEND="http://localhost:3000"
